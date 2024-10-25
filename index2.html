@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>BytesAnimados</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .matrices-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+            width: 100%;
+            max-width: 1200px;
+        }
+        .animated-matrix, .static-matrices {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .matrix {
+            display: grid;
+            grid-template-columns: repeat(8, 30px);
+            grid-template-rows: repeat(8, 30px);
+            gap: 5px;
+            background-color: #111;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .static-matrix {
+            width: 100%;
+        }
+        .led {
+            width: 30px;
+            height: 30px;
+            background-color: #333;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        .on {
+            background-color: #0f0;
+        }
+        @media (max-width: 600px) {
+            .matrix {
+                grid-template-columns: repeat(8, 20px);
+                grid-template-rows: repeat(8, 20px);
+                gap: 3px;
+            }
+            .led {
+                width: 20px;
+                height: 20px;
+            }
+        }
+        .static-matrix-container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .static-matrix-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .static-matrix-wrapper span {
+            font-size: 14px;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Animación en 8 bytes</h1>
+
+<div class="matrices-container">
+    <!-- Matriz Principal Animada -->
+    <div class="animated-matrix">
+        <h3>Simulación del comportamiento de una matriz de led 8x8 MAX7219</h3>
+        <div class="matrix" id="animated-matrix">
+            <!-- La cuadrícula de la matriz animada se generará dinámicamente con JavaScript -->
+        </div>
+    </div>
+
+    <!-- Matrices Estáticas de Referencia -->
+    <div class="static-matrices">
+        <h2>Referencias a cuadros estáticos</h2>
+	<h3>Haz clic en cada led para alternar su valor</h3>
+        <div class="static-matrix-container" id="static-matrix-container">
+            <!-- Las cuadrículas estáticas se generarán dinámicamente con JavaScript -->
+        </div>
+    </div>
+</div>
+
+<script>
+// Definir las matrices de LED como arrays de bytes
+const tipo_camina_1 = [
+    "00110000",
+    "00110000",
+    "00011000",
+    "00011000",
+    "00011000",
+    "00011000",
+    "00001000",
+    "00001000"
+];
+
+const tipo_camina_2 = [
+    "00110000",
+    "00110000",
+    "00011000",
+    "00011100",
+    "01111110",
+    "00111000",
+    "00100010",
+    "00000010"
+];
+
+const tipo_camina_4 = [
+    "00110000",
+    "00110000",
+    "00011100",
+    "01111010",
+    "00011000",
+    "00100100",
+    "00100010",
+    "00100000"
+];
+
+const tipo_camina_5 = [
+    "00110000",
+    "00110000",
+    "00011000",
+    "00011000",
+    "00111000",
+    "00011100",
+    "00011000",
+    "00010000"
+];
+
+// Agrupar todas las matrices en un solo array
+const frames = [tipo_camina_1, tipo_camina_2, tipo_camina_4, tipo_camina_5];
+
+// Generar la cuadrícula de la matriz animada
+const animatedMatrix = document.getElementById('animated-matrix');
+for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+        const led = document.createElement('div');
+        led.className = 'led';
+        led.id = `animated-led-${row}-${col}`;
+        animatedMatrix.appendChild(led);
+    }
+}
+
+// Generar las cuatro cuadrículas estáticas
+const staticMatrixContainer = document.getElementById('static-matrix-container');
+for (let m = 0; m < frames.length; m++) {
+    const staticMatrixWrapper = document.createElement('div');
+    staticMatrixWrapper.className = 'static-matrix-wrapper';
+
+    const span = document.createElement('span');
+    span.textContent = `Cuadro ${m + 1}`;
+    staticMatrixWrapper.appendChild(span);
+
+    const staticMatrix = document.createElement('div');
+    staticMatrix.className = 'matrix static-matrix';
+    staticMatrix.id = `static-matrix-${m}`;
+
+    for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+            const led = document.createElement('div');
+            led.className = 'led';
+            led.id = `static-led-${m}-${row}-${col}`;
+            // Habilitar alternar en todas las matrices
+            led.addEventListener('click', () => toggleLed(m, row, col));
+            staticMatrix.appendChild(led);
+        }
+    }
+
+    staticMatrixWrapper.appendChild(staticMatrix);
+    staticMatrixContainer.appendChild(staticMatrixWrapper);
+}
+
+// Configuración de la animación
+let currentFrame = 0;
+const totalFrames = frames.length;
+const delay = 250; // milisegundos
+
+// Función para actualizar la matriz animada
+function updateAnimatedMatrix() {
+    const frame = frames[currentFrame];
+    for (let row = 0; row < 8; row++) {
+        const rowData = frame[row];
+        for (let col = 0; col < 8; col++) {
+            const led = document.getElementById(`animated-led-${row}-${col}`);
+            if (led) {
+                const bit = rowData.charAt(col) === '1' ? 'on' : '';
+                led.className = 'led ' + bit;
+            }
+        }
+    }
+    // Avanzar al siguiente cuadro
+    currentFrame = (currentFrame + 1) % totalFrames;
+}
+
+// Inicializar la matriz animada
+setInterval(updateAnimatedMatrix, delay);
+updateAnimatedMatrix();
+
+// Función para actualizar las matrices estáticas
+function updateStaticMatrices() {
+    frames.forEach((frame, index) => {
+        for (let row = 0; row < 8; row++) {
+            const rowData = frame[row];
+            for (let col = 0; col < 8; col++) {
+                const led = document.getElementById(`static-led-${index}-${row}-${col}`);
+                if (led) {
+                    const bit = rowData.charAt(col) === '1' ? 'on' : '';
+                    led.className = 'led ' + bit;
+                }
+            }
+        }
+    });
+}
+
+// Inicializar las matrices estáticas
+updateStaticMatrices();
+
+// Función para alternar el estado de un LED en una matriz estática
+function toggleLed(frameIndex, row, col) {
+    const led = document.getElementById(`static-led-${frameIndex}-${row}-${col}`);
+    if (led) {
+        led.classList.toggle('on');
+        // Actualizar el estado del LED en el frame correspondiente
+        const frame = frames[frameIndex];
+        const rowData = frame[row];
+        const newRowData = rowData.substring(0, col) + (rowData.charAt(col) === '1' ? '0' : '1') + rowData.substring(col + 1);
+        frame[row] = newRowData;
+        // Actualizar la matriz animada para reflejar los cambios
+        updateAnimatedMatrix();
+    }
+}
+
+</script>
+
+</body>
+</html>
